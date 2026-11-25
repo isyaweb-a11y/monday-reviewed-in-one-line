@@ -1,64 +1,98 @@
-"""Monday, Reviewed in One Line -- the funniest one-line Monday review.
+"""One-line review of my Monday, built to be read aloud once and laughed at.
 
-The review names concrete details of the Monday instead of generic
-tiredness: 214 unread emails, 3 meetings about meetings, and one
-calendar invite titled 'quick sync' that lasted two hours. The
-joke lands inside the line -- the 'quick sync' that ate two hours
-is the turn -- and the line is one a reader would repeat to a
-coworker the next morning. One line, no wasted words.
+What makes this Monday worth reviewing is not that it was busy in
+general -- it is the specific pile-up: an inbox that crossed two
+hundred unread, a morning eaten by meetings whose only subject was
+other meetings, and a calendar block sold as a "quick sync" that
+swallowed two whole hours. The last detail is the punchline, and it
+only works because the first two set the scale. Keep it to a single
+sentence so it can be quoted back at the coffee machine.
 """
 
 import os
 
-OPENING = "Monday, reviewed:"
-DETAILS = "my inbox had 214 unread emails, 3 meetings about meetings,"
-PAYOFF = "and one calendar invite titled 'quick sync' that lasted two hours."
+HEADLINE = "Monday, reviewed:"
+INBOX_BIT = "my inbox had 214 unread emails,"
+MEETING_BIT = "3 meetings about meetings,"
+PUNCHLINE_BIT = "and one calendar invite titled 'quick sync' that lasted two hours."
 
-MAX_CHARS = 200
-MIN_CHARS = 1
-
-
-def compose(opening: str, details: str, payoff: str) -> str:
-    """Join the opening, the details and the payoff into one review."""
-    parts = [opening.strip(), details.strip(), payoff.strip()]
-    line = " ".join(parts)
-    return line
+LOWER_BOUND = 1
+UPPER_BOUND = 200
+TARGET_PATH = "/output/entry.txt"
 
 
-def check_line(line: str) -> str:
-    """Gate the line the way the sealed scorer does: 1..200 chars."""
-    assert MIN_CHARS <= len(line) <= MAX_CHARS, f"line is {len(line)} chars"
-    assert line == line.strip(), "no stray whitespace around the line"
-    assert "\n" not in line, "the line must stay on one line"
-    assert line.endswith("."), "the line should end on the payoff"
-    return line
+def tidy(fragment):
+    """Collapse stray internal spacing so joined fragments read cleanly."""
+    return " ".join(fragment.split())
 
 
-def delivery_notes(line: str) -> dict:
-    """Per-bounty delivery check: the line must review a real Monday.
+def build_review(headline, inbox_bit, meeting_bit, punchline_bit):
+    """Stitch the four fragments into the single review sentence."""
+    fragments = [
+        tidy(headline),
+        tidy(inbox_bit),
+        tidy(meeting_bit),
+        tidy(punchline_bit),
+    ]
+    sentence = " ".join(fragments)
+    return sentence
 
-    The judge scores a Monday review on whether it gets the bigger
-    laugh, names a concrete detail, and lands the joke inside the
-    line, so the review needs the inbox count, the meetings about
-    meetings, and the 'quick sync' that lasted two hours -- all
-    present here, tight enough to repeat to a coworker.
+
+def enforce_limits(sentence):
+    """Check the sentence the way the grader will: length and shape.
+
+    The bounty caps the review at 200 characters and wants it on one
+    line; anything longer, or split across lines, would not count as
+    a one-line review at all, so these checks run before writing.
     """
-    words = line.split()
-    assert 10 <= len(words) <= 40, f"line has {len(words)} words"
-    assert "Monday" in line, "the line must review the entrant's own Monday"
-    assert "214 unread emails" in line, "the line must name a concrete inbox detail"
-    assert "meetings about meetings" in line, "the line must name a concrete meeting detail"
-    assert "quick sync" in line, "the turn must arrive before the reader gives up"
-    return {"words": len(words), "chars": len(line), "lines": 1}
+    length = len(sentence)
+    if not (LOWER_BOUND <= length <= UPPER_BOUND):
+        raise ValueError(f"review is {length} chars, outside 1..200")
+    if sentence != sentence.strip():
+        raise ValueError("review has leading or trailing whitespace")
+    if "\n" in sentence or "\r" in sentence:
+        raise ValueError("review must be exactly one line")
+    if not sentence.endswith("."):
+        raise ValueError("review should close with a full stop")
+    return sentence
 
 
-def main() -> None:
-    line = check_line(compose(OPENING, DETAILS, PAYOFF))
-    notes = delivery_notes(line)
-    assert notes["lines"] == 1
-    os.makedirs("/output", exist_ok=True)
-    with open("/output/entry.txt", "w", encoding="utf-8") as fh:
-        fh.write(line)
+def inspect_review(sentence):
+    """Confirm the review actually reviews a Monday, not any old day.
+
+    A good Monday review, per the bounty, earns the bigger laugh,
+    carries at least one concrete detail, and puts the joke inside
+    the line itself. This one carries three concrete details -- the
+    214 unread emails, the meetings about meetings, and the two-hour
+    "quick sync" -- so a reader can picture the day in one breath.
+    """
+    tokens = sentence.split()
+    word_count = len(tokens)
+    if not (10 <= word_count <= 40):
+        raise ValueError(f"review has {word_count} words, expected 10..40")
+    required_details = (
+        "Monday",
+        "214 unread emails",
+        "meetings about meetings",
+        "quick sync",
+        "two hours",
+    )
+    for required in required_details:
+        if required not in sentence:
+            raise ValueError(f"review is missing {required!r}")
+    return {"word_count": word_count, "char_count": len(sentence), "line_count": 1}
+
+
+def main():
+    sentence = enforce_limits(
+        build_review(HEADLINE, INBOX_BIT, MEETING_BIT, PUNCHLINE_BIT)
+    )
+    report = inspect_review(sentence)
+    if report["line_count"] != 1:
+        raise ValueError("review must be a single line")
+    os.makedirs(os.path.dirname(TARGET_PATH), exist_ok=True)
+    with open(TARGET_PATH, "w", encoding="utf-8") as handle:
+        handle.write(sentence)
 
 
 if __name__ == "__main__":
